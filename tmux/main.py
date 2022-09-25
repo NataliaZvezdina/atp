@@ -1,4 +1,5 @@
 import click
+import libtmux
 
 
 @click.group()
@@ -13,6 +14,14 @@ def start(number):
     """Command on cli_1"""
     click.echo('Command start on cli_1')
     click.echo(f'start running {number} envs')
+
+    session = server.new_session()
+    session.attached_pane.send_keys('echo Howdy', enter=True)
+
+    for i in range(number - 1):
+        window = session.new_window(attach=False)
+        pane = window.attached_pane
+        pane.send_keys('echo Howdy', enter=True)
 
 
 @click.group()
@@ -37,16 +46,20 @@ def cli_3():
 
 
 @cli_3.command()
-@click.option('-s', '--session-name', required=True, type=click.IntRange(min=0),
+@click.option('-s', '--session-id', required=True, type=click.IntRange(min=0),
               help='Tmux-session number where environments are running')
-def stop_all(session_name):
+def stop_all(session_id):
     """Command on cli_3"""
     click.echo('Command stop_all on cli_3')
-    click.echo(f'stop all environments at session {session_name}')
+    click.echo(f'find session by id {session_id} and stop it')
+    session_to_stop = server.get_by_id(f'${session_id}')
+    click.echo(f'{session_to_stop}')
+    # click.echo(f'stop all environments at session {session_id}')
 
 
 cli = click.CommandCollection(sources=[cli_1, cli_2, cli_3])
 
 
 if __name__ == '__main__':
+    server = libtmux.Server()
     cli()
