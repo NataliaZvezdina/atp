@@ -1,6 +1,7 @@
 import click
 import libtmux
 import os
+from tqdm import tqdm
 
 
 @click.group()
@@ -18,12 +19,14 @@ def start(number, base_dir='./'):
 
     session = server.new_session()
     pane = session.attached_window.attached_pane
-    run_commands(pane)
+    pbar = tqdm(desc='starting envs', total=number)
+    run_commands(pane, pbar)
 
     for i in range(number - 1):
         window = session.new_window(attach=False)
         pane = window.attached_pane
-        run_commands(pane)
+        run_commands(pane, pbar)
+    pbar.close()
 
 
 @click.group()
@@ -78,7 +81,7 @@ def stop_all(session_id):
 cli = click.CommandCollection(sources=[cli_1, cli_2, cli_3])
 
 
-def run_commands(pane, base_dir='./', port=10916):
+def run_commands(pane, pbar, base_dir='./', port=10916):
     folder_num = pane.get('pane_id')[1:]
     folder = base_dir + folder_num
     pane.send_keys(f'mkdir {folder}')
@@ -88,10 +91,10 @@ def run_commands(pane, base_dir='./', port=10916):
     pane.send_keys(f'source {env}/bin/activate')
 
     port += int(folder_num)
-    print(port)
     token_ = os.urandom(24).hex()
     pane.send_keys(f'jupyter notebook --ip=$(hostname -i) --port {port} --no-browser --NotebookApp.token="{token_}" \
                     --NotebookApp.notebook_dir="{base_dir}"')
+    pbar.update(1)
 
 
 if __name__ == '__main__':
