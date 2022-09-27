@@ -11,22 +11,22 @@ def cli_1():
 
 @cli_1.command()
 @click.option('-n', '--number', required=True, type=click.IntRange(min=1),
-              help='Provide number of users jupyter notebooks that should be run')
-def start(number, base_dir='./'):
-    """Command on cli_1"""
-    click.echo('Command start on cli_1')
-    click.echo(f'start running {number} envs')
-
+              help='Provide number of environments that should be run')
+def start(number):
+    """
+    Command run in parallel N (`number`) isolated Jupyter Notebook environments using tmux. A new tmux-session with
+    N windows is being created, in each of which the environment is running.
+    """
     session = server.new_session()
     pane = session.attached_window.attached_pane
-    pbar = tqdm(desc='starting envs', total=number)
-    run_commands(pane, pbar)
+    progress_bar = tqdm(desc='Starting environments', total=number)
+    run_commands(pane, progress_bar)
 
     for i in range(number - 1):
         window = session.new_window(attach=False)
         pane = window.attached_pane
-        run_commands(pane, pbar)
-    pbar.close()
+        run_commands(pane, progress_bar)
+    progress_bar.close()
 
 
 @click.group()
@@ -36,27 +36,31 @@ def cli_2():
 
 @cli_2.command()
 @click.option('-s', '--session-id', required=True, type=click.IntRange(min=0),
-              help='Tmux-session id where environments are running')
+              help='Tmux-session ID where environments are running')
 @click.option('-n', '--number', required=True, type=click.IntRange(min=0),
-              help='The sequence number of environment that can be killed')
+              help='The sequence number of environment that should be killed')
 def stop(session_id, number):
-    """Command on cli_2"""
-    click.echo('Command stop on cli_2')
-    click.echo(f'stop env with number {number} at session {session_id}')
-
+    """
+    Stop the n-th (`number`) environment at given tmux-session ID (`session_id)
+    """
     session = server.get_by_id(f'${session_id}')
+    if session is None:
+        click.echo(f'Tmux-session ${session_id} was not found')
+        return
+
     found_pane = None
 
     for window in session.list_windows():
         for pane in window.list_panes():
             if pane.get('pane_id')[1:] == str(number):
                 found_pane = pane
-                pane.window.kill_window()
                 break
 
     if found_pane is None:
-        print('No environment with such id running')
+        click.echo(f'At session {session_id} No environment with such number {number} running')
         return
+
+    found_pane.cmd('kill-pane')
 
 
 @click.group()
@@ -66,37 +70,51 @@ def cli_3():
 
 @cli_3.command()
 @click.option('-s', '--session-id', required=True, type=click.IntRange(min=0),
-              help='Tmux-session number where environments are running')
+              help='Tmux-session ID where environments are running')
 def stop_all(session_id):
-    """Command on cli_3"""
-    click.echo('Command stop_all on cli_3')
-    click.echo(f'find session by id {session_id} and stop it')
+    """
+    Completely stop all environments at given tmux-session ID (`session_id`) by killing this session.
+    """
     session_to_stop = server.get_by_id(f'${session_id}')
-    click.echo(f'{session_to_stop}')
+    if session_to_stop is None:
+        click.echo(f'Tmux-session ${session_id} was not found')
+        return
 
     os.system(f'tmux kill-session -t {session_id}')
-    click.echo(f'stop session {session_id}')
+    click.echo(f'Tmux-session ${session_id} has been stopped')
 
 
-cli = click.CommandCollection(sources=[cli_1, cli_2, cli_3])
+def run_commands(pane, progress_bar, base_dir='./', port=10916):
+    """
+    Run commands at defined tmux-pane (`pane`), execution repels by provided directory (`base_dir`). For each user
+    a specific is being created using pane ID(enumerated via tmux), at these folders python virtual environment is
+    being created using venv. And inside activated virtual environment Jupyter Notebook environment is being started
+    on a separate network port with a separate (unique and random) token).
 
-
-def run_commands(pane, pbar, base_dir='./', port=10916):
+    :param pane: tmux-pane to run commands at
+    :param progress_bar: progress bar associated with environment loading
+    :param base_dir: base directory to work at pane, defaults to './'
+    :param port: network port to start environment, defaults to 10916
+    """
     folder_num = pane.get('pane_id')[1:]
     folder = base_dir + folder_num
-    pane.send_keys(f'mkdir {folder}')
-    pane.send_keys(f'cd {folder}')
+    pane.send_keys(f'mkdir {folder}; cd {folder}')
     env = f'venv_{folder_num}'
     pane.send_keys(f'python3 -m venv {env}')
     pane.send_keys(f'source {env}/bin/activate')
 
     port += int(folder_num)
     token_ = os.urandom(24).hex()
-    pane.send_keys(f'jupyter notebook --ip=$(hostname -i) --port {port} --no-browser --NotebookApp.token="{token_}" \
-                    --NotebookApp.notebook_dir="{base_dir}"')
-    pbar.update(1)
+    pane.send_keys(f'jupyter notebook --ip="*" --port {port} --NotebookApp.token="{token_}" \
+    --NotebookApp.notebook_dir="{base_dir}"')
+
+    session_id = pane.window.session.get('session_id')[1:]
+    click.echo(f'At tmux-session № {session_id} Jupyter notebook environment № {folder_num} \
+    started at port {port} with token {token_}')
+    progress_bar.update(1)
 
 
 if __name__ == '__main__':
     server = libtmux.Server()
+    cli = click.CommandCollection(sources=[cli_1, cli_2, cli_3])
     cli()
