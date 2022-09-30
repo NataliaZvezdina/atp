@@ -57,7 +57,7 @@ def stop(session_id, number):
                 break
 
     if found_pane is None:
-        click.echo(f'At session {session_id} No environment with such number {number} running')
+        click.echo(f'At session {session_id} no environment with such number {number} running')
         return
 
     found_pane.cmd('kill-pane')
@@ -105,8 +105,8 @@ def run_commands(pane, progress_bar, base_dir='./', port=10916):
 
     port += int(folder_num)
     token_ = os.urandom(24).hex()
-    pane.send_keys(f'jupyter notebook --ip="*" --port {port} --NotebookApp.token="{token_}" \
-    --NotebookApp.notebook_dir="{base_dir}"')
+    pane.send_keys(f'jupyter notebook --ip="*" --port {port} --no-browser\
+    --NotebookApp.token="{token_}" --NotebookApp.notebook_dir="{base_dir}"')
 
     session_id = pane.window.session.get('session_id')[1:]
     click.echo(f'At tmux-session № {session_id} Jupyter notebook environment № {folder_num} \
