@@ -12,7 +12,9 @@ def main():
 @main.command()
 @click.option('-n', '--number', required=True, type=click.IntRange(min=1),
               help='Provide number of environments that should be run')
-def start(number):
+@click.option('-p', '--port', required=True, type=click.IntRange(0, 65535),
+              help='Provide a primary network port at which to start running Jupyter Notebook environments')
+def start(number, port):
     """
     Command run in parallel N (`number`) isolated Jupyter Notebook environments using tmux. A new tmux-session with
     N windows is being created, in each of which the environment is running.
@@ -20,12 +22,12 @@ def start(number):
     session = server.new_session()
     pane = session.attached_window.attached_pane
     progress_bar = tqdm(desc='Starting environments', total=number)
-    run_commands(pane, progress_bar)
+    run_commands(pane, port, progress_bar)
 
     for i in range(number - 1):
         window = session.new_window(attach=False)
         pane = window.attached_pane
-        run_commands(pane, progress_bar)
+        run_commands(pane, port, progress_bar)
     progress_bar.close()
 
 
@@ -74,7 +76,7 @@ def stop_all(session_id):
     click.echo(f'Tmux-session ${session_id} has been stopped')
 
 
-def run_commands(pane, progress_bar, base_dir='./', port=10916):
+def run_commands(pane, port, progress_bar, base_dir='./'):
     """
     Run commands at defined tmux-pane (`pane`), execution repels by provided directory (`base_dir`). For each user
     a specific is being created using pane ID(enumerated via tmux), at these folders python virtual environment is
@@ -82,9 +84,9 @@ def run_commands(pane, progress_bar, base_dir='./', port=10916):
     on a separate network port with a separate (unique and random) token).
 
     :param pane: tmux-pane to run commands at
+    :param port: network port to start environment
     :param progress_bar: progress bar associated with environment loading
     :param base_dir: base directory to work at pane, defaults to './'
-    :param port: network port to start environment, defaults to 10916
     """
     folder_num = pane.get('pane_id')[1:]
     folder = base_dir + folder_num
