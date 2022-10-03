@@ -5,11 +5,11 @@ from tqdm import tqdm
 
 
 @click.group()
-def cli_1():
+def main():
     pass
 
 
-@cli_1.command()
+@main.command()
 @click.option('-n', '--number', required=True, type=click.IntRange(min=1),
               help='Provide number of environments that should be run')
 def start(number):
@@ -29,12 +29,7 @@ def start(number):
     progress_bar.close()
 
 
-@click.group()
-def cli_2():
-    pass
-
-
-@cli_2.command()
+@main.command()
 @click.option('-s', '--session-id', required=True, type=click.IntRange(min=0),
               help='Tmux-session ID where environments are running')
 @click.option('-n', '--number', required=True, type=click.IntRange(min=0),
@@ -63,12 +58,7 @@ def stop(session_id, number):
     found_pane.cmd('kill-pane')
 
 
-@click.group()
-def cli_3():
-    pass
-
-
-@cli_3.command()
+@main.command()
 @click.option('-s', '--session-id', required=True, type=click.IntRange(min=0),
               help='Tmux-session ID where environments are running')
 def stop_all(session_id):
@@ -116,5 +106,4 @@ def run_commands(pane, progress_bar, base_dir='./', port=10916):
 
 if __name__ == '__main__':
     server = libtmux.Server()
-    cli = click.CommandCollection(sources=[cli_1, cli_2, cli_3])
-    cli()
+    main()
