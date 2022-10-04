@@ -14,7 +14,10 @@ def main():
               help='Provide number of environments that should be run')
 @click.option('-p', '--port', required=True, type=click.IntRange(0, 65535),
               help='Provide a primary network port at which to start running Jupyter Notebook environments')
-def start(number, port):
+@click.option('-d', '--base-dir', default='./', show_default=True,
+              help='Provide a base directory at which users working directories will be created. Unless default is '
+                   'used, the specified directory should exist')
+def start(number, port, base_dir):
     """
     Command run in parallel N (`number`) isolated Jupyter Notebook environments using tmux. A new tmux-session with
     N windows is being created, in each of which the environment is running.
@@ -22,12 +25,12 @@ def start(number, port):
     session = server.new_session()
     pane = session.attached_window.attached_pane
     progress_bar = tqdm(desc='Starting environments', total=number)
-    run_commands(pane, port, progress_bar)
+    run_commands(pane, port, progress_bar, base_dir)
 
     for i in range(number - 1):
         window = session.new_window(attach=False)
         pane = window.attached_pane
-        run_commands(pane, port, progress_bar)
+        run_commands(pane, port, progress_bar, base_dir)
     progress_bar.close()
 
 
@@ -76,17 +79,19 @@ def stop_all(session_id):
     click.echo(f'Tmux-session ${session_id} has been stopped')
 
 
-def run_commands(pane, port, progress_bar, base_dir='./'):
+def run_commands(pane, port, progress_bar, base_dir):
     """
-    Run commands at defined tmux-pane (`pane`), execution repels by provided directory (`base_dir`). For each user
-    a specific is being created using pane ID(enumerated via tmux), at these folders python virtual environment is
-    being created using venv. And inside activated virtual environment Jupyter Notebook environment is being started
-    on a separate network port with a separate (unique and random) token).
+    Run commands at defined tmux-pane (`pane`). At provided base directory (`base_dir`) for each user a specific working
+    folder is being created using pane ID(enumerated via tmux), at these folders python virtual environment is being
+    created using venv. And inside activated virtual environment Jupyter Notebook environment is being started on a
+    separate network port with a separate (unique and random) token). Supplied port (`port`) is used for the first
+    starting Notebook server, for each subsequent server port with step 1 are used. In case of specified port has been
+    already taken, free one is used.
 
     :param pane: tmux-pane to run commands at
     :param port: network port to start environment
-    :param progress_bar: progress bar associated with environment loading
-    :param base_dir: base directory to work at pane, defaults to './'
+    :param progress_bar: progress bar associated with environments loading
+    :param base_dir: base directory to create users working folders
     """
     folder_num = pane.get('pane_id')[1:]
     folder = base_dir + folder_num
@@ -97,12 +102,12 @@ def run_commands(pane, port, progress_bar, base_dir='./'):
 
     port += int(folder_num)
     token_ = os.urandom(24).hex()
-    pane.send_keys(f'jupyter notebook --ip="*" --port {port} --no-browser\
-    --NotebookApp.token="{token_}" --NotebookApp.notebook_dir="{base_dir}"')
+    pane.send_keys(f'jupyter notebook --ip="*" --port {port} --no-browser --NotebookApp.token="{token_}" '
+                   f'--NotebookApp.notebook_dir="./"')
 
     session_id = pane.window.session.get('session_id')[1:]
-    click.echo(f'At tmux-session № {session_id} Jupyter notebook environment № {folder_num} \
-    started at port {port} with token {token_}')
+    click.echo(f'At tmux-session № {session_id} Jupyter notebook environment № {folder_num} started at port {port} '
+               f'with token {token_}')
     progress_bar.update(1)
 
 
