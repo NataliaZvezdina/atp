@@ -11,6 +11,25 @@ services:
     ports:
       - '5432:5432'
     restart: always
+    networks:
+      - bridge_net
+
+  infill:
+    container_name: infill
+    build: ./infill/
+    command:
+      - ${POSTGRES_DB}
+      - ${POSTGRES_USER}
+      - postgres_db
+      - ${POSTGRES_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - bridge_net
 
 volumes:
   db_data:
+
+networks:
+  bridge_net:
+    driver: bridge
