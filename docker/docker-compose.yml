@@ -27,6 +27,18 @@ services:
     networks:
       - bridge_net
 
+  web:
+    container_name: web
+    build: ./web/
+    env_file: .env
+    depends_on:
+      - infill
+    ports:
+      - '8000:8000'
+    restart: always
+    networks:
+      - bridge_net
+
 volumes:
   db_data:
 
