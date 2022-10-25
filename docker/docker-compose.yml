@@ -22,6 +22,8 @@ services:
       - ${POSTGRES_USER}
       - postgres_db
       - ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data.csv:/tmp/data.csv
     depends_on:
       - db
     networks:
