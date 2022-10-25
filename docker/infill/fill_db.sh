@@ -6,6 +6,6 @@ USERNAME=$2
 HOSTNAME=$3
 
 PGPASSWORD=$4 psql -h $HOSTNAME -U $USERNAME $DATABASE << EOF
-insert into test(name,age) values('Bob',22), ('Alisa', 28) returning *;
-select * from test
+\copy test(name,age) from '/tmp/data.csv' with delimiter ',' csv header;
+select * from test;
 EOF
