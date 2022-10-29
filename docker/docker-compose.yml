@@ -8,11 +8,10 @@ services:
     volumes:
       - ./db/init_script.sql:/docker-entrypoint-initdb.d/init_script.sql
       - db_data:/var/lib/postgresql/data
-    ports:
-      - '5432:5432'
     restart: always
     networks:
-      - bridge_net
+      macvlan_net:
+        ipv4_address: ${DB_CONTAINER_IP}
 
   infill:
     container_name: infill
@@ -27,23 +26,30 @@ services:
     depends_on:
       - db
     networks:
-      - bridge_net
+      macvlan_net:
+        ipv4_address: ${INFILL_CONTAINER_IP}
 
   web:
     container_name: web
     build: ./web/
     env_file: .env
     depends_on:
-      - infill
-    ports:
-      - '8000:8000'
+      infill:
+        condition: service_completed_successfully
     restart: always
     networks:
-      - bridge_net
+      macvlan_net:
+        ipv4_address: ${WEB_CONTAINER_IP}
 
 volumes:
   db_data:
 
 networks:
-  bridge_net:
-    driver: bridge
+  macvlan_net:
+    driver: macvlan
+    driver_opts:
+      parent: ${PARENT_INTERFACE}
+    ipam:
+      config:
+        - subnet: ${SUBNET}
+          gateway: ${GATEWAY}
