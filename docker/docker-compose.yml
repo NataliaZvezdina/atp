@@ -8,6 +8,11 @@ services:
     volumes:
       - ./db/init_script.sql:/docker-entrypoint-initdb.d/init_script.sql
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
     restart: always
     networks:
       macvlan_net:
@@ -24,7 +29,8 @@ services:
     volumes:
       - ./data.csv:/tmp/data.csv
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       macvlan_net:
         ipv4_address: ${INFILL_CONTAINER_IP}
