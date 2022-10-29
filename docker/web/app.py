@@ -1,10 +1,11 @@
-from flask import Flask, abort
+from flask import Flask, request
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 
 app = Flask(__name__)
+http_methods = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'CONNECT', 'OPTIONS', 'TRACE']
 
 dbname = os.environ['POSTGRES_DB']
 user = os.environ['POSTGRES_USER']
@@ -16,9 +17,12 @@ params = f'dbname={dbname} user={user} password={password} host={host} port={por
 print(params)
 
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
+@app.route('/', defaults={'path': ''}, methods=http_methods)
+@app.route('/<path:path>', methods=http_methods)
 def catch_all(path):
+    if request.method != 'GET':
+        return '', 404
+
     if path == '':
         con = psycopg2.connect(params)
         cur = con.cursor(cursor_factory=RealDictCursor)
@@ -29,7 +33,8 @@ def catch_all(path):
     elif path == 'health':
         return {'status': 'OK'}, 200
     else:
-        abort(404)
+        return '', 404
 
 
-app.run(host='0.0.0.0', port=8000)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000)
