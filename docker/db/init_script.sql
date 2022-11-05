@@ -1,5 +1,5 @@
 create table if not exists test
 (
-    name varchar(20),
+    name varchar,
     age int
 );
