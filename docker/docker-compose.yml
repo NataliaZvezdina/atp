@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  db:
+    container_name: postgres_db
+    image: postgres:15
+    env_file: .env
+    volumes:
+      - ./db/init_script.sql:/docker-entrypoint-initdb.d/init_script.sql
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    restart: always
+    networks:
+      macvlan_net:
+        ipv4_address: ${DB_CONTAINER_IP}
+
+  infill:
+    container_name: infill
+    build: ./infill/
+    command:
+      - ${POSTGRES_DB}
+      - ${POSTGRES_USER}
+      - postgres_db
+      - ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data.csv:/tmp/data.csv
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      macvlan_net:
+        ipv4_address: ${INFILL_CONTAINER_IP}
+
+  web:
+    container_name: web
+    build: ./web/
+    env_file: .env
+    depends_on:
+      infill:
+        condition: service_completed_successfully
+    restart: always
+    networks:
+      macvlan_net:
+        ipv4_address: ${WEB_CONTAINER_IP}
+
+volumes:
+  db_data:
+
+networks:
+  macvlan_net:
+    driver: macvlan
+    driver_opts:
+      parent: ${PARENT_INTERFACE}
+    ipam:
+      config:
+        - subnet: ${SUBNET}
+          gateway: ${GATEWAY}
