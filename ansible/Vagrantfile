@@ -1,0 +1,53 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Environment
+# OS: ubuntu 22.04
+# Vagrant: 2.2.19
+# Hypervisor: virtualbox 6.1.38
+
+
+TEST_MACHINES = {
+  #VM_NAME      IP_ADDRESS       RAM(mb)  GUI     BOX              HOST_SSH
+  "node01" => ['192.168.56.111', 512,     false, 'ubuntu/jammy64', 2221],
+  "node02" => ['192.168.56.112', 512,     false, 'centos/7',       2222],
+  "node03" => ['192.168.56.113', 512,     false, 'generic/arch',   2223],
+}
+
+ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
+
+
+Vagrant.configure("2") do |config|
+
+  if Vagrant.has_plugin?("vagrant-vbguest")
+    config.vbguest.auto_update = false
+  end
+  
+  TEST_MACHINES.each do |(name, cfg)|
+    ipaddr, ram, gui, box, ssh_host_port = cfg
+
+    if ARGV[0] != 'destroy'
+      config.vm.provision 'shell', inline: "echo #{ssh_pub_key} >> /home/vagrant/.ssh/authorized_keys"
+    end
+
+    config.vm.define name do |machine|
+      machine.vm.box = box
+      machine.vm.provider "virtualbox" do |vbox|
+        vbox.gui    = gui
+        vbox.memory = ram
+        vbox.cpus   = 1
+        vbox.name   = name
+      end
+      machine.vm.hostname = name
+      machine.vm.network 'private_network', ip: ipaddr
+      machine.vm.network 'forwarded_port', id: 'ssh', host: ssh_host_port, guest: 22
+      
+      if ARGV[0] == 'destroy'
+        puts("Deleting entries from known_hosts")
+        system("ssh-keygen -f #{Dir.home}/.ssh/known_hosts -R '#{name}'")
+        system("ssh-keygen -R #{ipaddr}")
+      end    
+    end
+  end
+
+end
