@@ -4,3 +4,9 @@
   changed_when: false
   failed_when: false
   register: check_python
+
+- name: Gather facts about target host
+  setup:
+    filter:
+      - 'ansible_distribution'
+      - 'ansible_pkg_mgr'
