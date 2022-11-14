@@ -10,3 +10,6 @@
     filter:
       - 'ansible_distribution'
       - 'ansible_pkg_mgr'
+
+- name: Install nginx
+  include_tasks: nginx-{{ ansible_distribution }}.yml
