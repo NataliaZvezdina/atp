@@ -1,0 +1,6 @@
+---
+- name: Check for Python
+  raw: ls -l /usr/bin/python*
+  changed_when: false
+  failed_when: false
+  register: check_python
