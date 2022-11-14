@@ -1,0 +1,7 @@
+---
+- name: Install nginx
+  pacman:
+    name:
+      - nginx
+    update_cache: yes
+    state: latest
