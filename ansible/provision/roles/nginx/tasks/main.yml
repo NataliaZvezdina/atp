@@ -14,8 +14,11 @@
     filter:
       - 'ansible_distribution'
 
+- name: Include variables for respective OS.
+  include_vars: "{{ ansible_distribution }}.yml"
+
 - name: Install nginx
-  include_tasks: nginx-{{ ansible_distribution }}.yml
+  include_tasks: "nginx-{{ ansible_distribution }}.yml"
 
 - name: Force notified handlers to run at this point
   meta: flush_handlers
@@ -25,5 +28,8 @@
     path: /opt/service_state
     line: "Seems work"
     state: present
+  check_mode: yes
+  register: presence
+  changed_when: presence.changed
   notify:
     - Service nginx restart

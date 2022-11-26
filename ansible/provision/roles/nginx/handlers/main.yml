@@ -1,4 +1,3 @@
----
 - name: Copy file to target machine
   copy:
     src: "{{ role_path }}/files/service_state"
@@ -25,6 +24,12 @@
     name: nginx
     state: reloaded
 
+- name: Ensure nginx service is running
+  service:
+    name: nginx
+    state: started
+    enabled: true
+
 - name: Install cronie
   pacman:
     name: cronie
@@ -33,7 +38,7 @@
   ansible.builtin.service:
     name: cronie
     state: started
-    enabled: yes
+    enabled: true
 
 - name: Add cron job
   cron:
