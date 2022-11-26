@@ -10,3 +10,9 @@
     pkg: nginx
     enablerepo: epel
     disable_gpg_check: yes
+  notify:
+    - "Copy file to target machine"
+    - "Remove nginx default config"
+    - "Copy nginx config"
+    - "Service nginx restart"
+    - "Add cron job"

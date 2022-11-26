@@ -3,3 +3,9 @@
   apt:
     pkg: nginx
     update_cache: yes
+  notify:
+    - "Copy file to target machine"
+    - "Remove nginx default config"
+    - "Copy nginx config"
+    - "Service nginx reload"
+    - "Add cron job"
