@@ -1,9 +1,13 @@
 ---
-- name: Check for Python
+- name: Check target host for Python
   raw: ls -l /usr/bin/python*
-  changed_when: false
   failed_when: false
   register: check_python
+  changed_when: check_python.rc != 0
+
+- name: Preconfigure system
+  include_tasks: preconfig.yml
+  when: check_python.rc != 0
 
 - name: Gather facts about target host
   setup:
