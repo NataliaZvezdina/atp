@@ -16,3 +16,14 @@
 
 - name: Install nginx
   include_tasks: nginx-{{ ansible_distribution }}.yml
+
+- name: Force notified handlers to run at this point
+  meta: flush_handlers
+
+- name: Check for changes in 1-st line of service_state file
+  lineinfile:
+    path: /opt/service_state
+    line: "Seems work"
+    state: present
+  notify:
+    - Service nginx restart
