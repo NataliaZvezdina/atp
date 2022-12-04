@@ -1,0 +1,17 @@
+FROM centos:7
+WORKDIR /opt/app
+ADD ./shapes-centos/ .
+RUN yum install -y --nogpgcheck epel-release && \
+    curl -O https://download.java.net/java/GA/jdk17.0.1/2a2082e5a09d4267845be086888add4f/12/GPL/openjdk-17.0.1_linux-x64_bin.tar.gz && \
+    tar -xzf openjdk-17.0.1_linux-x64_bin.tar.gz && \
+    mv jdk-17.0.1 /opt/ && \
+    curl -O https://dlcdn.apache.org/maven/maven-3/3.8.6/binaries/apache-maven-3.8.6-bin.tar.gz && \
+    tar -xzf apache-maven-3.8.6-bin.tar.gz && \
+    mv apache-maven-3.8.6 /opt/
+ENV JAVA_HOME /opt/jdk-17.0.1
+ENV PATH $JAVA_HOME/bin:$PATH
+ENV M2_HOME /opt/apache-maven-3.8.6
+ENV MAVEN_HOME /opt/apache-maven-3.8.6
+ENV PATH $M2_HOME/bin:$PATH
+RUN mvn help:evaluate -Dexpression=settings.localRepository && \
+    mvn dependency:resolve-plugins dependency:go-offline -B
