@@ -1,0 +1,6 @@
+FROM ubuntu:22.04
+WORKDIR /opt/app
+ADD ./shapes-ubuntu/ .
+RUN apt update && apt install openjdk-17-jdk maven -y && \
+    mvn help:evaluate -Dexpression=settings.localRepository && \
+    mvn dependency:resolve-plugins dependency:go-offline -B
